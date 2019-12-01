@@ -77,7 +77,7 @@ func (p *Parser) Errors() []error {
 }
 
 func (p *Parser) peekError(t token.TokenType) {
-	p.errors = append(p.errors, fmt.Errorf("Expected next token %s got %s", t, p.next.Type))
+	p.errors = append(p.errors, fmt.Errorf("expected next token %s got %s", t, p.next.Type))
 }
 
 // Parse .
