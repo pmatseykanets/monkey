@@ -9,6 +9,7 @@ import (
 	"github.com/pmatseykanets/monkey/token"
 )
 
+// precedence values.
 const (
 	_ int = iota
 	LOWEST
@@ -20,6 +21,18 @@ const (
 	CALL        // foo(x)
 
 )
+
+// precedences associates token types with their precedence values.
+var precedences = map[token.TokenType]int{
+	token.EQ:       EQUALS,
+	token.NOT_EQ:   EQUALS,
+	token.LT:       LESSGREATER,
+	token.GT:       LESSGREATER,
+	token.PLUS:     SUM,
+	token.MINUS:    SUM,
+	token.ASTERISK: PRODUCT,
+	token.SLASH:    PRODUCT,
+}
 
 type prefixFn func() ast.Expression
 type infixFn func(ast.Expression) ast.Expression
@@ -48,6 +61,16 @@ func New(lex *lexer.Lexer) *Parser {
 	p.prefixFns[token.INT] = p.parseIntegerLiteral
 	p.prefixFns[token.BANG] = p.parsePrefixExpression
 	p.prefixFns[token.MINUS] = p.parsePrefixExpression
+
+	// Register infix parsing funstions.
+	p.infixFns[token.PLUS] = p.parseInfixExpression
+	p.infixFns[token.MINUS] = p.parseInfixExpression
+	p.infixFns[token.ASTERISK] = p.parseInfixExpression
+	p.infixFns[token.SLASH] = p.parseInfixExpression
+	p.infixFns[token.LT] = p.parseInfixExpression
+	p.infixFns[token.GT] = p.parseInfixExpression
+	p.infixFns[token.EQ] = p.parseInfixExpression
+	p.infixFns[token.NOT_EQ] = p.parseInfixExpression
 
 	// Advance twice to fill in p.curr and p.next
 	p.nextToken()
@@ -161,6 +184,17 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 
 	left := prefix()
 
+	for p.next.Type != token.SEMICOLON && precedence < p.peekPrecedence() {
+		infix := p.infixFns[p.next.Type]
+		if infix == nil {
+			return left
+		}
+
+		p.nextToken()
+
+		left = infix(left)
+	}
+
 	return left
 }
 
@@ -193,6 +227,36 @@ func (p *Parser) parsePrefixExpression() ast.Expression {
 	p.nextToken()
 
 	exp.Right = p.parseExpression(PREFIX)
+
+	return exp
+}
+
+func (p *Parser) currPrecedence() int {
+	if p, ok := precedences[p.curr.Type]; ok {
+		return p
+	}
+
+	return LOWEST
+}
+
+func (p *Parser) peekPrecedence() int {
+	if p, ok := precedences[p.next.Type]; ok {
+		return p
+	}
+
+	return LOWEST
+}
+
+func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
+	exp := &ast.Infix{
+		Token:    p.curr,
+		Operator: p.curr.Literal,
+		Left:     left,
+	}
+
+	precedence := p.currPrecedence()
+	p.nextToken()
+	exp.Right = p.parseExpression(precedence)
 
 	return exp
 }

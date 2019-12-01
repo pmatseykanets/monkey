@@ -140,7 +140,9 @@ func (n *IntegerLiteral) String() string {
 }
 
 // Prefix represents a prefix expression.
-// E.g. !5 or -10
+// E.g.
+// !5
+// -10
 type Prefix struct {
 	Token    token.Token
 	Operator string
@@ -153,4 +155,29 @@ func (n *Prefix) TokenLiteral() string {
 }
 func (n *Prefix) String() string {
 	return "(" + n.Operator + n.Right.String() + ")"
+}
+
+// Infix represents an infix expression.
+// E.g.
+// 5 + 5
+// 5 - 5
+// 5 * 5
+// 5 / 5
+// 5 > 5
+// 5 < 5
+// 5 == 5
+// 5 != 5
+type Infix struct {
+	Token    token.Token
+	Left     Expression
+	Operator string
+	Right    Expression
+}
+
+func (n *Infix) expressionNode() {}
+func (n *Infix) TokenLiteral() string {
+	return n.Token.Literal
+}
+func (n *Infix) String() string {
+	return "(" + n.Left.String() + " " + n.Operator + " " + n.Right.String() + ")"
 }

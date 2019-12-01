@@ -232,3 +232,86 @@ func testIntegerLiteral(t *testing.T, exp ast.Expression, value int64) bool {
 
 	return true
 }
+
+func TestParseInfixExpressions(t *testing.T) {
+	tests := []struct {
+		input    string
+		left     int64
+		operator string
+		right    int64
+	}{
+		{"5 + 5", 5, "+", 5},
+		{"5 - 5", 5, "-", 5},
+		{"5 * 5", 5, "*", 5},
+		{"5 / 5", 5, "/", 5},
+		{"5 > 5", 5, ">", 5},
+		{"5 < 5", 5, "<", 5},
+		{"5 == 5", 5, "==", 5},
+		{"5 != 5", 5, "!=", 5},
+	}
+
+	for _, tt := range tests {
+		p := New(lexer.FromString(tt.input))
+		prg := p.Parse()
+		checkParseErrors(t, p)
+
+		if prg == nil {
+			t.Fatal("Program is nil")
+		}
+		if want, got := 1, len(prg.Statements); want != got {
+			t.Fatalf("Expected number of statements %d got %d", want, got)
+		}
+
+		stmt, ok := prg.Statements[0].(*ast.BareExpr)
+		if !ok {
+			t.Fatalf("Expected *ast.BareExpr got %T", prg.Statements[0])
+		}
+
+		exp, ok := stmt.Value.(*ast.Infix)
+		if !ok {
+			t.Fatalf("Expected *ast.Infix got %T", stmt.Value)
+		}
+		if !testIntegerLiteral(t, exp.Left, tt.left) {
+			return
+		}
+		if want, got := tt.operator, exp.Operator; want != got {
+			t.Errorf("Expected Operator %s got %s", want, got)
+		}
+		if !testIntegerLiteral(t, exp.Right, tt.right) {
+			return
+		}
+	}
+}
+
+func TestParseOperatorPrecedence(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"-a * b", "((-a) * b)"},
+		{"!-a", "(!(-a))"},
+		{"a + b + c", "((a + b) + c)"},
+		{"a + b - c", "((a + b) - c)"},
+		{"a * b * c", "((a * b) * c)"},
+		{"a * b / c", "((a * b) / c)"},
+		{"a + b / c", "(a + (b / c))"},
+		{"a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"},
+		{"3 + 4; -5 * 5", "(3 + 4)((-5) * 5)"},
+		{"5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"},
+		{"5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"},
+		{"3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"},
+	}
+
+	for _, tt := range tests {
+		p := New(lexer.FromString(tt.input))
+		prg := p.Parse()
+		checkParseErrors(t, p)
+
+		if prg == nil {
+			t.Fatal("Program is nil")
+		}
+		if got := prg.String(); tt.want != got {
+			t.Errorf("Expected %s got %s", tt.want, got)
+		}
+	}
+}
