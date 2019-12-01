@@ -6,7 +6,7 @@ import (
 	"github.com/pmatseykanets/monkey/token"
 )
 
-func TestString(t *testing.T) {
+func TestProgramString(t *testing.T) {
 	prg := &Program{
 		Statements: []Statement{
 			&Let{
