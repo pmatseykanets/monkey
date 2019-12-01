@@ -181,3 +181,20 @@ func (n *Infix) TokenLiteral() string {
 func (n *Infix) String() string {
 	return "(" + n.Left.String() + " " + n.Operator + " " + n.Right.String() + ")"
 }
+
+// Boolean represents a boolean literal.
+// E.g.
+// true
+// false
+type Boolean struct {
+	Token token.Token
+	Value bool
+}
+
+func (n *Boolean) expressionNode() {}
+func (n *Boolean) TokenLiteral() string {
+	return n.Token.Literal
+}
+func (n *Boolean) String() string {
+	return strconv.FormatBool(n.Value)
+}

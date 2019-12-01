@@ -161,6 +161,8 @@ func testLiteralExpression(t *testing.T, exp ast.Expression, want interface{}) b
 		return testIntegerLiteral(t, exp, v)
 	case string:
 		return testIdentifier(t, exp, v)
+	case bool:
+		return testBoolean(t, exp, v)
 	}
 
 	t.Errorf("Unhandled exp type %T", exp)
@@ -214,10 +216,12 @@ func TestParsePrefixExpressions(t *testing.T) {
 	tests := []struct {
 		input    string
 		operator string
-		value    int64
+		value    interface{}
 	}{
 		{"!5", "!", 5},
 		{"-15", "-", 15},
+		{"!true", "!", true},
+		{"!false", "!", false},
 	}
 
 	for _, tt := range tests {
@@ -273,9 +277,9 @@ func testIntegerLiteral(t *testing.T, exp ast.Expression, value int64) bool {
 func TestParseInfixExpressions(t *testing.T) {
 	tests := []struct {
 		input    string
-		left     int64
+		left     interface{}
 		operator string
-		right    int64
+		right    interface{}
 	}{
 		{"5 + 5", 5, "+", 5},
 		{"5 - 5", 5, "-", 5},
@@ -285,6 +289,9 @@ func TestParseInfixExpressions(t *testing.T) {
 		{"5 < 5", 5, "<", 5},
 		{"5 == 5", 5, "==", 5},
 		{"5 != 5", 5, "!=", 5},
+		{"true == true", true, "==", true},
+		{"true != false", true, "!=", false},
+		{"false == false", false, "==", false},
 	}
 
 	for _, tt := range tests {
@@ -327,6 +334,10 @@ func TestParseOperatorPrecedence(t *testing.T) {
 		{"5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"},
 		{"5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"},
 		{"3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"},
+		{"true", "true"},
+		{"false", "false"},
+		{"3 < 5 == true", "((3 < 5) == true)"},
+		{"3 > 5 == false", "((3 > 5) == false)"},
 	}
 
 	for _, tt := range tests {
@@ -339,6 +350,58 @@ func TestParseOperatorPrecedence(t *testing.T) {
 		}
 		if got := prg.String(); tt.want != got {
 			t.Errorf("Expected %s got %s", tt.want, got)
+		}
+	}
+}
+
+func testBoolean(t *testing.T, exp ast.Expression, value bool) bool {
+	boolean, ok := exp.(*ast.Boolean)
+	if !ok {
+		t.Errorf("Expected *ast.Boolean got %T", exp)
+		return false
+	}
+
+	if want, got := value, boolean.Value; want != got {
+		t.Errorf("Expected Value %v got %v", want, got)
+		return false
+	}
+
+	if want, got := strconv.FormatBool(value), boolean.TokenLiteral(); want != got {
+		t.Errorf("Expected TokenLiteral %s got %s", want, got)
+		return false
+	}
+
+	return true
+}
+
+func TestParseBooleanLiteralExpression(t *testing.T) {
+	tests := []struct {
+		input string
+		want  bool
+	}{
+		{"true", true},
+		{"false", false},
+	}
+
+	for _, tt := range tests {
+		p := New(lexer.FromString(tt.input))
+
+		prg := p.Parse()
+		checkParseErrors(t, p)
+		if prg == nil {
+			t.Fatal("Program is nil")
+		}
+		if want, got := 1, len(prg.Statements); want != got {
+			t.Fatalf("Expected number of statements %d got %d", want, got)
+		}
+
+		stmt, ok := prg.Statements[0].(*ast.BareExpr)
+		if !ok {
+			t.Fatalf("Expected *ast.BareExpr got %T", prg.Statements[0])
+		}
+
+		if !testLiteralExpression(t, stmt.Value, tt.want) {
+			return
 		}
 	}
 }
