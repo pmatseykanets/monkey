@@ -13,11 +13,16 @@ jobs:
         go-version: 1.13
       id: go
 
-    - name: Check out code into the Go module directory
+    - name: Check out code
       uses: actions/checkout@v1
 
     - name: Test
       run: make test
+
+    - name: Upload code coverage report to codecov
+      uses: codecov/codecov-action@v1.0.4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
     - name: Build
       run: make build
