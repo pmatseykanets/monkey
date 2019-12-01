@@ -138,3 +138,19 @@ func (n *IntegerLiteral) TokenLiteral() string {
 func (n *IntegerLiteral) String() string {
 	return strconv.FormatInt(n.Value, 10)
 }
+
+// Prefix represents a prefix expression.
+// E.g. !5 or -10
+type Prefix struct {
+	Token    token.Token
+	Operator string
+	Right    Expression
+}
+
+func (n *Prefix) expressionNode() {}
+func (n *Prefix) TokenLiteral() string {
+	return n.Token.Literal
+}
+func (n *Prefix) String() string {
+	return "(" + n.Operator + n.Right.String() + ")"
+}

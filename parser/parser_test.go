@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 
@@ -110,7 +111,7 @@ return 5 + 10;
 	}
 }
 
-func TestIdentifierExpression(t *testing.T) {
+func TestParseIdentifierExpression(t *testing.T) {
 	input := "foobar;"
 
 	p := New(lexer.FromString(input))
@@ -141,7 +142,7 @@ func TestIdentifierExpression(t *testing.T) {
 	}
 }
 
-func TestIntegerLiteralExpression(t *testing.T) {
+func TestParseIntegerLiteralExpression(t *testing.T) {
 	input := "5;"
 
 	p := New(lexer.FromString(input))
@@ -170,4 +171,64 @@ func TestIntegerLiteralExpression(t *testing.T) {
 	if want, got := "5", literal.TokenLiteral(); want != got {
 		t.Errorf("Expected literal.TokenLiteral %s got %s", want, got)
 	}
+}
+
+func TestParsePrefixExpressions(t *testing.T) {
+	tests := []struct {
+		input    string
+		operator string
+		value    int64
+	}{
+		{"!5", "!", 5},
+		{"-15", "-", 15},
+	}
+
+	for _, tt := range tests {
+		p := New(lexer.FromString(tt.input))
+		prg := p.Parse()
+		checkParseErrors(t, p)
+
+		if prg == nil {
+			t.Fatal("Program is nil")
+		}
+		if want, got := 1, len(prg.Statements); want != got {
+			t.Fatalf("Expected number of statements %d got %d", want, got)
+		}
+
+		stmt, ok := prg.Statements[0].(*ast.BareExpr)
+		if !ok {
+			t.Fatalf("Expected *ast.BareExpr got %T", prg.Statements[0])
+		}
+
+		pre, ok := stmt.Value.(*ast.Prefix)
+		if !ok {
+			t.Fatalf("Expected *ast.Prefix got %T", stmt.Value)
+		}
+		if want, got := tt.operator, pre.Operator; want != got {
+			t.Errorf("Expected Operator %s got %s", want, got)
+		}
+		if !testIntegerLiteral(t, pre.Right, tt.value) {
+			return
+		}
+	}
+}
+
+func testIntegerLiteral(t *testing.T, exp ast.Expression, value int64) bool {
+	integer, ok := exp.(*ast.IntegerLiteral)
+	if !ok {
+		t.Errorf("Expected *ast.IntegerLiteral got %T", exp)
+		return false
+	}
+
+	if want, got := value, integer.Value; want != got {
+		t.Errorf("Expected Value %d got %d", want, got)
+		return false
+	}
+
+	if want, got := strconv.FormatInt(value, 10), integer.TokenLiteral(); want != got {
+		t.Errorf("Expected TokenLiteral %s got %s", want, got)
+		return false
+	}
+
+	return true
 }

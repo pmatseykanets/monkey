@@ -46,6 +46,8 @@ func New(lex *lexer.Lexer) *Parser {
 	// Register prefix parsing funstions.
 	p.prefixFns[token.IDENT] = p.parseIdentifier
 	p.prefixFns[token.INT] = p.parseIntegerLiteral
+	p.prefixFns[token.BANG] = p.parsePrefixExpression
+	p.prefixFns[token.MINUS] = p.parsePrefixExpression
 
 	// Advance twice to fill in p.curr and p.next
 	p.nextToken()
@@ -153,6 +155,7 @@ func (p *Parser) parseExpressionStatement() *ast.BareExpr {
 func (p *Parser) parseExpression(precedence int) ast.Expression {
 	prefix := p.prefixFns[p.curr.Type]
 	if prefix == nil {
+		p.errors = append(p.errors, fmt.Errorf("missing prefixFn for %s", p.curr.Type))
 		return nil
 	}
 
@@ -179,4 +182,17 @@ func (p *Parser) parseIntegerLiteral() ast.Expression {
 		Token: p.curr,
 		Value: value,
 	}
+}
+
+func (p *Parser) parsePrefixExpression() ast.Expression {
+	exp := &ast.Prefix{
+		Token:    p.curr,
+		Operator: p.curr.Literal,
+	}
+
+	p.nextToken()
+
+	exp.Right = p.parseExpression(PREFIX)
+
+	return exp
 }
