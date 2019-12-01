@@ -3,6 +3,7 @@ package ast
 import (
 	"bytes"
 	"github.com/pmatseykanets/monkey/token"
+	"strconv"
 )
 
 type Node interface {
@@ -121,4 +122,19 @@ func (n *BareExpr) String() string {
 		return ""
 	}
 	return n.Value.String()
+}
+
+// IntegerLiteral represents an integer literal.
+// E.g. 5;
+type IntegerLiteral struct {
+	Token token.Token
+	Value int64
+}
+
+func (n *IntegerLiteral) expressionNode() {}
+func (n *IntegerLiteral) TokenLiteral() string {
+	return n.Token.Literal
+}
+func (n *IntegerLiteral) String() string {
+	return strconv.FormatInt(n.Value, 10)
 }

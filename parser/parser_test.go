@@ -131,12 +131,43 @@ func TestIdentifierExpression(t *testing.T) {
 
 	ident, ok := stmt.Value.(*ast.Identifier)
 	if !ok {
-		t.Errorf("Expected *ast.Identifier got %T", stmt.Value)
+		t.Fatalf("Expected *ast.Identifier got %T", stmt.Value)
 	}
 	if want, got := "foobar", ident.Value; want != got {
 		t.Errorf("Expected ident.Value %s got %s", want, got)
 	}
 	if want, got := "foobar", ident.TokenLiteral(); want != got {
 		t.Errorf("Expected ident.TokenLiteral %s got %s", want, got)
+	}
+}
+
+func TestIntegerLiteralExpression(t *testing.T) {
+	input := "5;"
+
+	p := New(lexer.FromString(input))
+
+	prg := p.Parse()
+	checkParseErrors(t, p)
+	if prg == nil {
+		t.Fatal("Program is nil")
+	}
+	if want, got := 1, len(prg.Statements); want != got {
+		t.Fatalf("Expected number of statements %d got %d", want, got)
+	}
+
+	stmt, ok := prg.Statements[0].(*ast.BareExpr)
+	if !ok {
+		t.Fatalf("Expected *ast.BareExpr got %T", prg.Statements[0])
+	}
+
+	literal, ok := stmt.Value.(*ast.IntegerLiteral)
+	if !ok {
+		t.Fatalf("Expected *ast.IntegerLiteral got %T", stmt.Value)
+	}
+	if want, got := int64(5), literal.Value; want != got {
+		t.Errorf("Expected literal.Value %d got %d", want, got)
+	}
+	if want, got := "5", literal.TokenLiteral(); want != got {
+		t.Errorf("Expected literal.TokenLiteral %s got %s", want, got)
 	}
 }
