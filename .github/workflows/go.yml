@@ -19,6 +19,15 @@ jobs:
     - name: Test
       run: make test
 
+    - name: staticcheck
+      run: |
+        # add executables installed with go get to PATH
+        # TODO: this will hopefully be fixed by
+        # https://github.com/actions/setup-go/issues/14
+        export PATH=${PATH}:`go env GOPATH`/bin
+        go get -u honnef.co/go/tools/cmd/staticcheck
+        staticcheck ./...
+
     - name: Upload code coverage report to codecov
       uses: codecov/codecov-action@v1.0.4
       with:
