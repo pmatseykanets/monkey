@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"github.com/pmatseykanets/monkey/token"
 	"strconv"
+	"strings"
 )
 
 type Node interface {
@@ -252,4 +253,28 @@ func (n *Block) String() string {
 	}
 
 	return buf.String()
+}
+
+// Function represents a function literal.
+// E.g.
+// fn(x, y) {
+// 	return x + y;
+// }
+type Function struct {
+	Token token.Token
+	Args  []*Identifier
+	Body  *Block
+}
+
+func (n *Function) expressionNode() {}
+func (n *Function) TokenLiteral() string {
+	return n.Token.Literal
+}
+func (n *Function) String() string {
+	args := make([]string, len(n.Args))
+	for i := range n.Args {
+		args[i] = n.Args[i].String()
+	}
+
+	return n.TokenLiteral() + "(" + strings.Join(args, ", ") + ") " + n.Body.String()
 }

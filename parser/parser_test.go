@@ -512,3 +512,78 @@ func TestParseIfElseExpression(t *testing.T) {
 		return
 	}
 }
+
+func TestParseFunctionLiteral(t *testing.T) {
+	input := "fn(x, y) { x + y; }"
+
+	p := New(lexer.FromString(input))
+
+	prg := p.Parse()
+	checkParseErrors(t, p)
+	if prg == nil {
+		t.Fatal("Program is nil")
+	}
+	if want, got := 1, len(prg.Statements); want != got {
+		t.Fatalf("Expected number of statements %d got %d", want, got)
+	}
+
+	stmt, ok := prg.Statements[0].(*ast.BareExpr)
+	if !ok {
+		t.Fatalf("Expected *ast.BareExpr got %T", prg.Statements[0])
+	}
+
+	fn, ok := stmt.Value.(*ast.Function)
+	if !ok {
+		t.Fatalf("Expected *ast.Function got %T", stmt.Value)
+	}
+
+	if want, got := 2, len(fn.Args); want != got {
+		t.Fatalf("Expected args %d got %d", want, got)
+	}
+
+	testLiteralExpression(t, fn.Args[0], "x")
+	testLiteralExpression(t, fn.Args[1], "y")
+
+	if want, got := 1, len(fn.Body.Statements); want != got {
+		t.Fatalf("Expected fn body statements %d got %d", want, got)
+	}
+
+	bd, ok := fn.Body.Statements[0].(*ast.BareExpr)
+	if !ok {
+		t.Fatalf("Expected fn body statement type *ast.BareExp got %T", fn.Body.Statements[0])
+	}
+
+	testInfixExpression(t, bd.Value, "x", "+", "y")
+}
+
+func TestParseFunctionArgs(t *testing.T) {
+	tests := []struct {
+		input string
+		args  []string
+	}{
+		{"fn() {};", []string{}},
+		// {"fn(x) {};", []string{"x"}},
+		// {"fn(x, y, z) {};", []string{"x", "y", "z"}},
+	}
+
+	for _, tt := range tests {
+		p := New(lexer.FromString(tt.input))
+
+		prg := p.Parse()
+		checkParseErrors(t, p)
+		if prg == nil {
+			t.Fatal("Program is nil")
+		}
+
+		stmt := prg.Statements[0].(*ast.BareExpr)
+		fn := stmt.Value.(*ast.Function)
+
+		if want, got := len(tt.args), len(fn.Args); want != got {
+			t.Fatalf("Expected args %d got %d", want, got)
+		}
+
+		for i, ident := range tt.args {
+			testLiteralExpression(t, fn.Args[i], ident)
+		}
+	}
+}

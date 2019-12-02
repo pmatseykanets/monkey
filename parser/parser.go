@@ -67,6 +67,7 @@ func New(lex *lexer.Lexer) *Parser {
 	p.prefixFns[token.FALSE] = p.parseBoolean
 	p.prefixFns[token.LPAREN] = p.parseGroupExpression
 	p.prefixFns[token.IF] = p.parseIfExpression
+	p.prefixFns[token.FUNCTION] = p.parseFunctionLiteral
 
 	// Register infix parsing funstions.
 	p.infixFns[token.PLUS] = p.parseInfixExpression
@@ -306,6 +307,9 @@ func (p *Parser) parseBoolean() ast.Expression {
 }
 
 func (p *Parser) parseGroupExpression() ast.Expression {
+	if p.trace {
+		defer untrace(trace("parseGroupExpression"))
+	}
 	p.nextToken()
 
 	exp := p.parseExpression(LOWEST)
@@ -317,6 +321,9 @@ func (p *Parser) parseGroupExpression() ast.Expression {
 }
 
 func (p *Parser) parseIfExpression() ast.Expression {
+	if p.trace {
+		defer untrace(trace("parseIfExpression"))
+	}
 	exp := &ast.If{Token: p.curr}
 
 	if !p.expectNext(token.LPAREN) {
@@ -349,6 +356,9 @@ func (p *Parser) parseIfExpression() ast.Expression {
 }
 
 func (p *Parser) parseBlockStatement() *ast.Block {
+	if p.trace {
+		defer untrace(trace("parseBlockStatement"))
+	}
 	block := &ast.Block{
 		Token:      p.curr,
 		Statements: make([]ast.Statement, 0),
@@ -365,4 +375,49 @@ func (p *Parser) parseBlockStatement() *ast.Block {
 	}
 
 	return block
+}
+
+func (p *Parser) parseFunctionLiteral() ast.Expression {
+	if p.trace {
+		defer untrace(trace("parseFunctionLiteral"))
+	}
+	fn := &ast.Function{Token: p.curr}
+
+	if !p.expectNext(token.LPAREN) {
+		return nil
+	}
+	fn.Args = p.parseFunctionArgs()
+	if !p.expectNext(token.LBRACE) {
+		return nil
+	}
+	fn.Body = p.parseBlockStatement()
+
+	return fn
+}
+
+func (p *Parser) parseFunctionArgs() []*ast.Identifier {
+	if p.trace {
+		defer untrace(trace("parseFunctionArgs"))
+	}
+	args := make([]*ast.Identifier, 0)
+
+	if p.next.Type == token.RPAREN {
+		p.nextToken()
+		return args
+	}
+
+	p.nextToken()
+	args = append(args, &ast.Identifier{Token: p.curr, Value: p.curr.Literal})
+
+	for p.next.Type == token.COMMA {
+		p.nextToken()
+		p.nextToken()
+		args = append(args, &ast.Identifier{Token: p.curr, Value: p.curr.Literal})
+	}
+
+	if !p.expectNext(token.RPAREN) {
+		return nil
+	}
+
+	return args
 }
