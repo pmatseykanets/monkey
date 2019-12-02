@@ -141,11 +141,11 @@ func testIdentifier(t *testing.T, exp ast.Expression, value string) bool {
 		t.Fatalf("Expected *ast.Identifier got %T", exp)
 		return false
 	}
-	if want, got := "foobar", ident.Value; want != got {
+	if want, got := value, ident.Value; want != got {
 		t.Errorf("Expected ident.Value %s got %s", want, got)
 		return false
 	}
-	if want, got := "foobar", ident.TokenLiteral(); want != got {
+	if want, got := value, ident.TokenLiteral(); want != got {
 		t.Errorf("Expected ident.TokenLiteral %s got %s", want, got)
 		return false
 	}
@@ -408,5 +408,107 @@ func TestParseBooleanLiteralExpression(t *testing.T) {
 		if !testLiteralExpression(t, stmt.Value, tt.want) {
 			return
 		}
+	}
+}
+
+func TestParseIfExpression(t *testing.T) {
+	input := "if (x < y) { x }"
+
+	p := New(lexer.FromString(input))
+
+	prg := p.Parse()
+	checkParseErrors(t, p)
+	if prg == nil {
+		t.Fatal("Program is nil")
+	}
+	if want, got := 1, len(prg.Statements); want != got {
+		t.Fatalf("Expected number of statements %d got %d", want, got)
+	}
+
+	stmt, ok := prg.Statements[0].(*ast.BareExpr)
+	if !ok {
+		t.Fatalf("Expected *ast.BareExpr got %T", prg.Statements[0])
+	}
+
+	exp, ok := stmt.Value.(*ast.If)
+	if !ok {
+		t.Fatalf("Expected *ast.If got %T", stmt.Value)
+	}
+
+	if !testInfixExpression(t, exp.Condition, "x", "<", "y") {
+		return
+	}
+	if want, got := 1, len(exp.Consequence.Statements); want != got {
+		t.Errorf("Expected statements %d got %d", want, got)
+	}
+
+	con, ok := exp.Consequence.Statements[0].(*ast.BareExpr)
+	if !ok {
+		t.Fatalf("Expected ast.BareExpr statement got %t", exp.Consequence.Statements[0])
+	}
+
+	if !testIdentifier(t, con.Value, "x") {
+		return
+	}
+
+	if exp.Alternative != nil {
+		t.Errorf("Expected Alternative nil got %+v", exp.Alternative)
+	}
+}
+
+func TestParseIfElseExpression(t *testing.T) {
+	input := `
+	if (x < y) { 
+		x 
+	} else {
+		y
+	}
+	`
+
+	p := New(lexer.FromString(input))
+
+	prg := p.Parse()
+	checkParseErrors(t, p)
+	if prg == nil {
+		t.Fatal("Program is nil")
+	}
+	if want, got := 1, len(prg.Statements); want != got {
+		t.Fatalf("Expected number of statements %d got %d", want, got)
+	}
+
+	stmt, ok := prg.Statements[0].(*ast.BareExpr)
+	if !ok {
+		t.Fatalf("Expected *ast.BareExpr got %T", prg.Statements[0])
+	}
+
+	exp, ok := stmt.Value.(*ast.If)
+	if !ok {
+		t.Fatalf("Expected *ast.If got %T", stmt.Value)
+	}
+
+	if !testInfixExpression(t, exp.Condition, "x", "<", "y") {
+		return
+	}
+
+	if want, got := 1, len(exp.Consequence.Statements); want != got {
+		t.Errorf("Expected Consequence statements %d got %d", want, got)
+	}
+	con, ok := exp.Consequence.Statements[0].(*ast.BareExpr)
+	if !ok {
+		t.Fatalf("Expected ast.BareExpr statement got %t", exp.Consequence.Statements[0])
+	}
+	if !testIdentifier(t, con.Value, "x") {
+		return
+	}
+
+	if want, got := 1, len(exp.Alternative.Statements); want != got {
+		t.Errorf("Expected Alternative statements %d got %d", want, got)
+	}
+	alt, ok := exp.Alternative.Statements[0].(*ast.BareExpr)
+	if !ok {
+		t.Fatalf("Expected ast.BareExpr statement got %t", exp.Alternative.Statements[0])
+	}
+	if !testIdentifier(t, alt.Value, "y") {
+		return
 	}
 }

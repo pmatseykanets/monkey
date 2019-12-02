@@ -198,3 +198,58 @@ func (n *Boolean) TokenLiteral() string {
 func (n *Boolean) String() string {
 	return strconv.FormatBool(n.Value)
 }
+
+// If represents a conditional if expression.
+// The else is optional and can be ommited.
+// E.g.
+// if (x < y) {
+// 	return x;
+// } else {
+// 	return y;
+// }
+// An if expression produces a value.
+// let z = if (x < y) { x } else { y };
+type If struct {
+	Token       token.Token
+	Condition   Expression
+	Consequence *Block
+	Alternative *Block
+}
+
+func (n *If) expressionNode() {}
+func (n *If) TokenLiteral() string {
+	return n.Token.Literal
+}
+func (n *If) String() string {
+	buf := "if" + n.Condition.String() + " " + n.Consequence.String()
+	if n.Alternative == nil {
+		return buf
+	}
+
+	return buf + "else" + n.Alternative.String()
+}
+
+// Block represents a block statement consisting of
+// one more statements enslosed in brackets.
+// E.g.
+// {
+// 	a + b;
+// }
+type Block struct {
+	Token      token.Token
+	Statements []Statement
+}
+
+func (n *Block) statementNode() {}
+func (n *Block) TokenLiteral() string {
+	return n.Token.Literal
+}
+func (n *Block) String() string {
+	var buf bytes.Buffer
+
+	for _, stmt := range n.Statements {
+		buf.WriteString(stmt.String())
+	}
+
+	return buf.String()
+}
