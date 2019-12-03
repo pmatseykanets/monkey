@@ -278,3 +278,27 @@ func (n *Function) String() string {
 
 	return n.TokenLiteral() + "(" + strings.Join(args, ", ") + ") " + n.Body.String()
 }
+
+// Call represents a function call expression.
+// E.g.
+// add(2, 3);
+// add(2 + 2, 3 * 3 * 3);
+// foo(2, 3, fn(x, y) { x + y; });
+type Call struct {
+	Token    token.Token
+	Function Expression
+	Args     []Expression
+}
+
+func (n *Call) expressionNode() {}
+func (n *Call) TokenLiteral() string {
+	return n.Token.Literal
+}
+func (n *Call) String() string {
+	args := make([]string, len(n.Args))
+	for i := range n.Args {
+		args[i] = n.Args[i].String()
+	}
+
+	return n.Function.String() + "(" + strings.Join(args, ", ") + ")"
+}

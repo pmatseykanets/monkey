@@ -343,6 +343,9 @@ func TestParseOperatorPrecedence(t *testing.T) {
 		{"2 / (5 + 5)", "(2 / (5 + 5))"},
 		{"-(5 + 5)", "(-(5 + 5))"},
 		{"!(true == true)", "(!(true == true))"},
+		{"a + add(b * c) + d", "((a + add((b * c))) + d)"},
+		{"add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))", "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))"},
+		{"add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))"},
 	}
 
 	for _, tt := range tests {
@@ -562,8 +565,8 @@ func TestParseFunctionArgs(t *testing.T) {
 		args  []string
 	}{
 		{"fn() {};", []string{}},
-		// {"fn(x) {};", []string{"x"}},
-		// {"fn(x, y, z) {};", []string{"x", "y", "z"}},
+		{"fn(x) {};", []string{"x"}},
+		{"fn(x, y, z) {};", []string{"x", "y", "z"}},
 	}
 
 	for _, tt := range tests {
@@ -584,6 +587,82 @@ func TestParseFunctionArgs(t *testing.T) {
 
 		for i, ident := range tt.args {
 			testLiteralExpression(t, fn.Args[i], ident)
+		}
+	}
+}
+
+func TestParseCallExpression(t *testing.T) {
+	input := "add(1, 2 * 3, 4 + 5);"
+
+	p := New(lexer.FromString(input))
+	prg := p.Parse()
+	checkParseErrors(t, p)
+	if prg == nil {
+		t.Fatal("Program is nil")
+	}
+	if want, got := 1, len(prg.Statements); want != got {
+		t.Fatalf("Expected number of statements %d got %d", want, got)
+	}
+
+	stmt, ok := prg.Statements[0].(*ast.BareExpr)
+	if !ok {
+		t.Fatalf("Expected *ast.BareExpr got %T", prg.Statements[0])
+	}
+
+	call, ok := stmt.Value.(*ast.Call)
+	if !ok {
+		t.Fatalf("Expected *ast.Call got %T", stmt.Value)
+	}
+
+	if !testIdentifier(t, call.Function, "add") {
+		return
+	}
+	if want, got := 3, len(call.Args); want != got {
+		t.Fatalf("Expected args %d got %d", want, got)
+	}
+
+	testLiteralExpression(t, call.Args[0], 1)
+	testInfixExpression(t, call.Args[1], 2, "*", 3)
+	testInfixExpression(t, call.Args[2], 4, "+", 5)
+}
+
+func TestParseCallExpressionArgs(t *testing.T) {
+	tests := []struct {
+		input string
+		ident string
+		args  []string
+	}{
+		{"add();", "add", []string{}},
+		{"add(1);", "add", []string{"1"}},
+		{"add(1, 2 * 3, 4 + 5);", "add", []string{"1", "(2 * 3)", "(4 + 5)"}},
+	}
+
+	for _, tt := range tests {
+		p := New(lexer.FromString(tt.input))
+		prg := p.Parse()
+		checkParseErrors(t, p)
+		if prg == nil {
+			t.Fatal("Program is nil")
+		}
+
+		stmt := prg.Statements[0].(*ast.BareExpr)
+		call, ok := stmt.Value.(*ast.Call)
+		if !ok {
+			t.Fatalf("Expected *ast.Call got %T", stmt.Value)
+		}
+
+		if !testIdentifier(t, call.Function, tt.ident) {
+			return
+		}
+
+		if want, got := len(tt.args), len(call.Args); want != got {
+			t.Fatalf("Expected agrs %d got=%d", want, got)
+		}
+
+		for i, want := range tt.args {
+			if got := call.Args[i].String(); want != got {
+				t.Errorf("Expected %d argument %s got %s", i, want, got)
+			}
 		}
 	}
 }
