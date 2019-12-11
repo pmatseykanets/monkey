@@ -159,8 +159,10 @@ func (p *Parser) parseLetStatement() *ast.Let {
 		return nil
 	}
 
-	// TODO: Skipping expressions until we encounter a semicolon
-	for p.curr.Type != token.SEMICOLON {
+	p.nextToken()
+
+	stmt.Value = p.parseExpression(LOWEST)
+	if p.next.Type == token.SEMICOLON {
 		p.nextToken()
 	}
 
@@ -175,8 +177,9 @@ func (p *Parser) parseReturnStatement() *ast.Return {
 
 	p.nextToken()
 
-	// TODO: Skipping expressions until we encounter a semicolon
-	for p.curr.Type != token.SEMICOLON {
+	stmt.Value = p.parseExpression(LOWEST)
+
+	for p.next.Type == token.SEMICOLON {
 		p.nextToken()
 	}
 

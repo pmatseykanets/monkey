@@ -2,7 +2,6 @@ package parser
 
 import (
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/pmatseykanets/monkey/ast"
@@ -10,35 +9,36 @@ import (
 )
 
 func TestParseLetStatement(t *testing.T) {
-	input := `
-let x = 5;
-let y = 10;
-let foobar = 838383;
-`
-
 	tests := []struct {
+		input string
 		ident string
+		value interface{}
 	}{
-		{"x"},
-		{"y"},
-		{"foobar"},
+		{"let x = 5;", "x", 5},
+		{"let y = true;", "y", true},
+		{"let foobar = y;", "foobar", "y"},
 	}
 
-	lex := lexer.New(strings.NewReader(input))
-	p := New(lex)
+	for _, tt := range tests {
 
-	prg := p.Parse()
-	checkParseErrors(t, p)
-	if prg == nil {
-		t.Fatal("Program is nil")
-	}
-	if want, got := 3, len(prg.Statements); want != got {
-		t.Fatalf("Expected number of statements %d got %d", want, got)
-	}
+		lex := lexer.FromString(tt.input)
+		p := New(lex)
 
-	for i, tt := range tests {
-		stmt := prg.Statements[i]
+		prg := p.Parse()
+		checkParseErrors(t, p)
+		if prg == nil {
+			t.Fatal("Program is nil")
+		}
+		if want, got := 1, len(prg.Statements); want != got {
+			t.Fatalf("Expected statements %d got %d", want, got)
+		}
+
+		stmt := prg.Statements[0]
 		if !testLetStatement(t, stmt, tt.ident) {
+			return
+		}
+		val := stmt.(*ast.Let).Value
+		if !testLiteralExpression(t, val, tt.value) {
 			return
 		}
 	}
@@ -81,32 +81,37 @@ func checkParseErrors(t *testing.T, p *Parser) {
 }
 
 func TestParseReturnStatement(t *testing.T) {
-	input := `
-return 5;
-return 10;
-return 5 + 10;
-`
-
-	p := New(lexer.FromString(input))
-
-	prg := p.Parse()
-	checkParseErrors(t, p)
-	if prg == nil {
-		t.Fatal("Program is nil")
-	}
-	if want, got := 3, len(prg.Statements); want != got {
-		t.Fatalf("Expected number of statements %d got %d", want, got)
+	tests := []struct {
+		input string
+		value interface{}
+	}{
+		{"return 5;", 5},
+		{"return true;", true},
+		{"return foobar;", "foobar"},
 	}
 
-	for _, stmt := range prg.Statements {
-		returnStmt, ok := stmt.(*ast.Return)
-		if !ok {
-			t.Errorf("Expected *ast.Return got %T", stmt)
-			continue
+	for _, tt := range tests {
+		p := New(lexer.FromString(tt.input))
+
+		prg := p.Parse()
+		checkParseErrors(t, p)
+		if prg == nil {
+			t.Fatal("Program is nil")
+		}
+		if want, got := 1, len(prg.Statements); want != got {
+			t.Fatalf("Expected statements %d got %d", want, got)
 		}
 
-		if want, got := "return", returnStmt.TokenLiteral(); want != got {
+		stmt, ok := prg.Statements[0].(*ast.Return)
+		if !ok {
+			t.Errorf("Expected *ast.Return got %T", prg.Statements[0])
+			continue
+		}
+		if want, got := "return", stmt.TokenLiteral(); want != got {
 			t.Errorf("Expected token literal %s got %s", want, got)
+		}
+		if !testLiteralExpression(t, stmt.Value, tt.value) {
+			return
 		}
 	}
 }
