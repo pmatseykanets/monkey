@@ -4,14 +4,14 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/pmatseykanets/monkey/lexer"
-	"github.com/pmatseykanets/monkey/token"
+	"github.com/pmatseykanets/monkey/parser"
 )
 
 const PROMPT = ">> "
 
+// Start .
 func Start(r io.Reader, w io.Writer) {
 	s := bufio.NewScanner(r)
 
@@ -24,14 +24,17 @@ func Start(r io.Reader, w io.Writer) {
 			return
 		}
 
-		lex := lexer.New(strings.NewReader(s.Text()))
-		for {
-			tok := lex.NextToken()
-			if tok.Type == token.EOF {
-				break
+		p := parser.New(lexer.FromString(s.Text()))
+		prg := p.Parse()
+		if len(p.Errors()) > 0 {
+			fmt.Fprintln(w, "parser errors:")
+			for _, msg := range p.Errors() {
+				fmt.Fprintln(w, "\t"+msg.Error())
 			}
-
-			fmt.Fprintf(w, "%+v\n", tok)
+			continue
 		}
+
+		fmt.Fprintf(w, "%s\n", prg.String())
+
 	}
 }
