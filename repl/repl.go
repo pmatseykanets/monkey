@@ -35,6 +35,5 @@ func Start(r io.Reader, w io.Writer) {
 		}
 
 		fmt.Fprintf(w, "%s\n", prg.String())
-
 	}
 }
