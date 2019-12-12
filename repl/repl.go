@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/pmatseykanets/monkey/eval"
 	"github.com/pmatseykanets/monkey/lexer"
 	"github.com/pmatseykanets/monkey/parser"
 )
@@ -34,6 +35,9 @@ func Start(r io.Reader, w io.Writer) {
 			continue
 		}
 
-		fmt.Fprintf(w, "%s\n", prg.String())
+		evald := eval.Eval(prg)
+		if evald != nil {
+			fmt.Fprintln(w, evald.Inspect())
+		}
 	}
 }
